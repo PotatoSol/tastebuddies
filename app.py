@@ -24,7 +24,7 @@ while(True):
     try:
         #Go through all of the playlists of the user and then...
         for playlistSelection in range(len(user_playlists['items'])):
-            print('Working on this playlist: ' + str(playlistSelection) + " out of " + str(len(user_playlists['items'])))
+            print('Working on this playlist: ' + str(playlistSelection + 1) + " out of " + str(len(user_playlists['items'])))
             #Go through the selected playlist and get the full version of it 
             fullUserPlaylist = helpers.importFullPlaylist(user_playlists['items'][playlistSelection]['id'])
             #Go through every song in the full selected playlist
@@ -52,11 +52,11 @@ while(True):
             cleaned_user_playlists.append(tempCleanedPlaylistTuple) #Adds to the end of the cleaned playlist (Playlist name, Cleaned song item)
             tempCleanedPlaylist.clear() #clear variable to be used again
             tempPlaylist.clear() #clear variable to be used again
-        
+
     except ConnectionError as e:
         print('Connection failed, continuing hopefully') #Does not retry, figure out how to do that
     finally:
         break #idk
 
 
-print(len(cleaned_user_playlists))
+print(len(cleaned_user_playlists)) #i have finaly downloaded the playlists lmao, now to do analysis
