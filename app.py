@@ -1,74 +1,62 @@
-import spotipy
-from spotipy.oauth2 import SpotifyOAuth
-import cred
-import pprint
+from numpy import full
 from requests.exceptions import ReadTimeout, ConnectionError
+from spotipy.oauth2 import SpotifyOAuth
+import helpers
+import spotipy
+import pprint
+import cred
 
 scope = "user-read-private"
-
 pp = pprint.PrettyPrinter(indent=0)
-sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=cred.client_id, client_secret= cred.client_secret, redirect_uri=cred.redirect_url, scope=scope), requests_timeout=10, retries=10)
+sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=cred.client_id, client_secret= cred.client_secret, redirect_uri=cred.redirect_url, scope=scope), requests_timeout=10, retries=100)
 
-user_playlists = spotipy.Spotify.current_user_playlists(sp)
-parsed_user_playlists = []
-cleaned_user_playlists = []
+#Grab all of the user's playlists from their profile
+user_playlists = spotipy.Spotify.current_user_playlists(sp).copy()
 
-tempPlaylist = []
-tempCleanedPlaylist = []
-tempPlaylistItems = None #Full Song Item
-tempCleanedSong = () #Tuple(Song Name, Artist, Song ID, Artist ID)
-tempSongName = None #Song Name
-tempArtists = [] #Artists
-tempSongID = None #SongID
-tempArtistIDs = [] #ArtistIDs
-playlistOffset = 0
-tempSongVar = None
+#Temporary Variables for the loop below, no underscores
+tempPlaylist, tempCleanedPlaylist, tempArtists, tempArtistIDs, fullUserPlaylist, tempCleanedSong, tempCleanedPlaylistTuple = [], [], [], [], [], (), ()
+tempSongName, tempSongID, tempSongVar, tempPlaylistItems = None, None, None, None 
 
-#TODO: add support for playlists over 100 tracks
-#maybe something like make a playlist before the loop and loop thru if its under the total 
-#can use tempPlaylistItems length to get current number of songs
-#and use user_playlists['items'][x]['tracks']['total'] to get the number of tracks per specific playlist
+#These will be returned after the loop below, have underscores
+parsed_user_playlists, cleaned_user_playlists = [], []
 
-#Input a Playlist ID and then get a full playlist as output
-def importFullPlaylist(importPlaylistID):
-    outputPlaylist = []
-    currentOffset = 0
-    importPlaylist = spotipy.Spotify.playlist_items(self = sp, playlist_id = importPlaylistID)
-    totalLen = importPlaylist['total']
-    
-    outputPlaylist.extend(importPlaylist['items'].copy())
-    while( len(outputPlaylist) < totalLen) : 
-        currentOffset += 100
-        importPlaylist = spotipy.Spotify.playlist_items(self = sp, playlist_id = importPlaylistID, offset = currentOffset)
-        outputPlaylist.extend(importPlaylist['items'].copy())
-        importPlaylist.clear()
-    
-    return outputPlaylist
-
-# #Go through each playlist and....
-# for i in range(1):#range(len(user_playlists['items'])):
-#     for j in range(user_playlists['items'][i]['tracks']['total']):
-#         tempPlaylistItems = spotipy.Spotify.playlist_items(playlist_id = user_playlists['items'][i]['id'], self = sp) #asigns the full song item to this var
-#         tempPlaylist.append(tempPlaylistItems) #adds the full song item to the temp playlist list
+while(True):
+    try:
+        #Go through all of the playlists of the user and then...
+        for playlistSelection in range(len(user_playlists['items'])):
+            print('Working on this playlist: ' + str(playlistSelection) + " out of " + str(len(user_playlists['items'])))
+            #Go through the selected playlist and get the full version of it 
+            fullUserPlaylist = helpers.importFullPlaylist(user_playlists['items'][playlistSelection]['id'])
+            #Go through every song in the full selected playlist
+            for songSelection in range(len(fullUserPlaylist)):
+                tempPlaylistItems = fullUserPlaylist[songSelection]
+                tempPlaylist.extend(fullUserPlaylist[songSelection]) #Adds the full song item to tempPlaylist
+                #TODO Maybe change these to dicts? tuple?
+                #Get the artist information for the selected song
+                
+                for artistSelection in (range(len(tempPlaylistItems['track']['artists']))):
+                    tempArtists.append(tempPlaylistItems['track']['artists'][artistSelection]['name']) #Get the name for each artist and add it to a temp var
+                    tempArtistIDs.append(tempPlaylistItems['track']['artists'][artistSelection]['id']) #Get the ID for each artist and add it to a temp var
+                #Temp var ( Song name, Artist names, Song IDs, Artist IDs - really only going to check Song ID later, probably)
+                tempCleanedSong = ( 
+                    tempPlaylistItems['track']['name'],
+                    tempArtists.copy(),
+                    tempPlaylistItems['track']['id'],
+                    tempArtistIDs.copy()
+                )
+                tempCleanedPlaylist.extend(tempCleanedSong) #Add the new cleared song item to the temp playlist
+                tempArtists.clear() #clear variable to be used again
+                tempArtistIDs.clear() #clear variable to be used again
+            parsed_user_playlists.extend((user_playlists['items'][playlistSelection], tempPlaylist.copy())) #Adds to the end of the parsed playlist (Playlist item, list of full song item)
+            tempCleanedPlaylistTuple = ((user_playlists['items'][playlistSelection]['name']), (tempCleanedPlaylist.copy()))
+            cleaned_user_playlists.append(tempCleanedPlaylistTuple) #Adds to the end of the cleaned playlist (Playlist name, Cleaned song item)
+            tempCleanedPlaylist.clear() #clear variable to be used again
+            tempPlaylist.clear() #clear variable to be used again
         
-#         for artist in range(len(tempPlaylistItems['items'][j]['track']['artists'])):
-#             print(len(tempPlaylistItems['items']))
-#             tempArtists.append(tempPlaylistItems['items'][j]['track']['artists'][artist]['name'])
-#             tempArtistIDs.append(tempPlaylistItems['items'][j]['track']['artists'][artist]['id'])
-        
-#         tempCleanedSong = ( #song, artists, id, artist ids
-#             tempPlaylistItems['items'][j]['track']['name'], 
-#             tempArtists.copy(),
-#             tempPlaylistItems['items'][j]['track']['id'],
-#             tempArtistIDs.copy()
-#             )
-#         tempCleanedPlaylist.append(tempCleanedSong)
-#         tempArtists.clear()
-#         tempArtistIDs.clear()
-#     parsed_user_playlists.append((user_playlists['items'][i], tempPlaylist.copy()))
-#     cleaned_user_playlists.append((user_playlists['items'][i]['name'], tempCleanedPlaylist.copy()))
-#     printOnce = tempCleanedPlaylist.copy()
-#     tempCleanedPlaylist.clear()
-#     tempPlaylist.clear()
+    except ConnectionError as e:
+        print('Connection failed, continuing hopefully') #Does not retry, figure out how to do that
+    finally:
+        break #idk
 
 
+print(len(cleaned_user_playlists))
