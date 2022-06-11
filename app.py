@@ -58,5 +58,4 @@ while(True):
     finally:
         break #idk
 
-
 print(len(cleaned_user_playlists)) #i have finaly downloaded the playlists lmao, now to do analysis
